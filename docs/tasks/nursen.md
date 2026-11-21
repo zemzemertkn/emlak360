@@ -17,56 +17,56 @@ Nurşen, diğer ekip üyelerinin geliştireceği ilan, favori, iletişim ve yön
 
 ### A. Frontend kurulumu ve ortak tasarım
 
-- [ ] React tabanlı frontend projesini oluşturmak.
-- [ ] Gerekli bağımlılıkları kurmak.
-- [ ] Sayfalar arası yönlendirme sistemini hazırlamak.
-- [ ] Ortak renk paleti, yazı tipleri ve tasarım kurallarını belirlemek.
-- [ ] Header, navigasyon menüsü ve footer oluşturmak.
-- [ ] Tekrar kullanılabilir buton, input, kart ve bildirim bileşenleri hazırlamak.
-- [ ] Mobil, tablet ve masaüstü ekranlara uyumlu tasarım oluşturmak.
-- [ ] Yükleniyor, boş veri ve hata durumları için ortak arayüz bileşenleri hazırlamak.
+- [x] React tabanlı frontend projesini oluşturmak.
+- [x] Gerekli bağımlılıkları kurmak.
+- [x] Sayfalar arası yönlendirme sistemini hazırlamak.
+- [x] Ortak renk paleti, yazı tipleri ve tasarım kurallarını belirlemek.
+- [x] Header, navigasyon menüsü ve footer oluşturmak.
+- [x] Tekrar kullanılabilir buton, input, kart ve bildirim bileşenleri hazırlamak.
+- [x] Mobil, tablet ve masaüstü ekranlara uyumlu tasarım oluşturmak.
+- [x] Yükleniyor, boş veri ve hata durumları için ortak arayüz bileşenleri hazırlamak.
 
 ### B. Ana sayfa
 
-- [ ] Emlak360 ana sayfasını tasarlamak.
-- [ ] Kullanıcıların ilanlara ulaşabileceği belirgin bir yönlendirme alanı oluşturmak.
-- [ ] İlan arama alanının görsel tasarımını hazırlamak.
-- [ ] Öne çıkan veya son eklenen ilanların gösterileceği alanı tasarlamak.
+- [x] Emlak360 ana sayfasını tasarlamak.
+- [x] Kullanıcıların ilanlara ulaşabileceği belirgin bir yönlendirme alanı oluşturmak.
+- [x] İlan arama alanının görsel tasarımını hazırlamak.
+- [x] Öne çıkan veya son eklenen ilanların gösterileceği alanı tasarlamak.
 - [ ] İlan kartları için Kübra ile ortak bileşen yapısını belirlemek.
-- [ ] Ana sayfayı mobil uyumlu hâle getirmek.
+- [x] Ana sayfayı mobil uyumlu hâle getirmek.
 
 **Not:** İlan arama algoritması, filtreleme ve ilan verilerinin yönetimi Kübra'nın sorumluluğundadır. Nurşen ana sayfanın tasarımını ve bu özelliklerin yerleşimini hazırlar.
 
 ### C. Kullanıcı kayıt ve giriş sayfaları
 
-- [ ] Kullanıcı kayıt sayfasını oluşturmak.
-- [ ] Kullanıcı giriş sayfasını oluşturmak.
-- [ ] Form doğrulama ve hata mesajlarını hazırlamak.
-- [ ] Kayıt formunu `POST /api/auth/register` endpoint'ine bağlamak.
-- [ ] Giriş formunu `POST /api/auth/login` endpoint'ine bağlamak.
-- [ ] Giriş sonrasında kullanıcı bilgilerini almak.
-- [ ] Kullanıcı çıkış işlemini arayüze eklemek.
-- [ ] Başarılı ve başarısız işlemler için bildirimler göstermek.
+- [x] Kullanıcı kayıt sayfasını oluşturmak.
+- [x] Kullanıcı giriş sayfasını oluşturmak.
+- [x] Form doğrulama ve hata mesajlarını hazırlamak.
+- [x] Kayıt formunu `POST /api/auth/register` endpoint'ine bağlamak.
+- [x] Giriş formunu `POST /api/auth/login` endpoint'ine bağlamak.
+- [x] Giriş sonrasında kullanıcı bilgilerini almak.
+- [x] Kullanıcı çıkış işlemini arayüze eklemek.
+- [x] Başarılı ve başarısız işlemler için bildirimler göstermek.
 
 ### D. Profil ve hesap sayfası
 
-- [ ] Kullanıcı profil sayfasını oluşturmak.
-- [ ] `GET /api/users/profile` ile profil bilgilerini görüntülemek.
-- [ ] `PATCH /api/users/profile` ile profil adı güncelleme işlemini bağlamak.
-- [ ] Şifre değiştirme formu hazırlamak.
-- [ ] `PATCH /api/users/password` endpoint'ini kullanmak.
-- [ ] Şifre değiştirildiğinde kullanıcının tekrar giriş yapmasını sağlamak.
-- [ ] Giriş yapmamış kullanıcıları uygun şekilde giriş sayfasına yönlendirmek.
+- [x] Kullanıcı profil sayfasını oluşturmak.
+- [x] `GET /api/users/profile` ile profil bilgilerini görüntülemek.
+- [x] `PATCH /api/users/profile` ile profil adı güncelleme işlemini bağlamak.
+- [x] Şifre değiştirme formu hazırlamak.
+- [x] `PATCH /api/users/password` endpoint'ini kullanmak.
+- [x] Şifre değiştirildiğinde kullanıcının tekrar giriş yapmasını sağlamak.
+- [x] Giriş yapmamış kullanıcıları uygun şekilde giriş sayfasına yönlendirmek.
 
 ### E. Ortak sayfa ve navigasyon düzeni
 
-- [ ] Kullanıcıların ilan listeleme sayfasına ulaşabileceği menü bağlantısını eklemek.
-- [ ] İlan oluşturma sayfasına yönlendirme eklemek.
-- [ ] Favoriler sayfasına yönlendirme eklemek.
-- [ ] Kullanıcı profili bağlantısını eklemek.
-- [ ] ADMIN rolündeki kullanıcılar için yönetici paneli bağlantısını göstermek.
-- [ ] Bilinmeyen adresler için 404 sayfası oluşturmak.
-- [ ] Sayfalar arası geçişlerin düzgün çalışmasını sağlamak.
+- [x] Kullanıcıların ilan listeleme sayfasına ulaşabileceği menü bağlantısını eklemek.
+- [x] İlan oluşturma sayfasına yönlendirme eklemek.
+- [x] Favoriler sayfasına yönlendirme eklemek.
+- [x] Kullanıcı profili bağlantısını eklemek.
+- [x] ADMIN rolündeki kullanıcılar için yönetici paneli bağlantısını göstermek.
+- [x] Bilinmeyen adresler için 404 sayfası oluşturmak.
+- [x] Sayfalar arası geçişlerin düzgün çalışmasını sağlamak.
 
 **Önemli:** Bir sayfanın menü bağlantısını hazırlamak, o sayfanın bütün işlevlerini geliştirmek anlamına gelmez. Diğer ekip üyeleri kendi sayfalarının içeriğini hazırlayacaktır.
 
@@ -170,18 +170,19 @@ Nurşen'in sorumluluğu ortak arayüz altyapısını sağlamaktır. Diğer ekip 
 
 ## 5. Görevin Kabul Kriterleri
 
-- [ ] React frontend projesi sorunsuz çalışıyor.
-- [ ] Ortak tasarım ve navigasyon bileşenleri hazır.
-- [ ] Ana sayfa tamamlandı.
-- [ ] Kayıt ve giriş sayfaları backend ile çalışıyor.
-- [ ] Kullanıcı çıkış işlemi arayüzden yapılabiliyor.
-- [ ] Profil görüntüleme ve güncelleme çalışıyor.
-- [ ] Şifre değiştirme arayüzü çalışıyor.
-- [ ] Mobil, tablet ve masaüstü uyumluluğu kontrol edildi.
+- [x] React frontend projesi sorunsuz çalışıyor.
+- [x] Ortak tasarım ve navigasyon bileşenleri hazır.
+- [x] Ana sayfa tamamlandı.
+- [ ] Kayıt ve giriş sayfaları backend ile uçtan uca çalışıyor.
+- [x] Kullanıcı çıkış işlemi arayüzden yapılabiliyor.
+- [ ] Profil görüntüleme ve güncelleme uçtan uca doğrulandı.
+- [ ] Şifre değiştirme arayüzü uçtan uca doğrulandı.
+- [x] Mobil, tablet ve masaüstü uyumluluğu kontrol edildi.
 - [ ] Diğer ekip üyeleri ortak frontend bileşenlerini kullanabiliyor.
-- [ ] Temel arayüz testleri gerçekleştirildi.
-- [ ] Modüle ait DİR risk değerlendirmesi hazırlandı.
-- [ ] Pull Request açıldı ve kod incelemesi tamamlandı.
+- [x] Temel arayüz testleri gerçekleştirildi.
+- [x] Modüle ait DİR risk değerlendirmesi hazırlandı.
+- [x] Pull Request açıldı.
+- [ ] Kod incelemesi ve birleştirme tamamlandı.
 
 ## 6. Görev Tamamlandığında
 
