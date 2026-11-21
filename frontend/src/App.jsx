@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import {
   Bath,
   BedDouble,
@@ -20,7 +20,50 @@ import {
 } from 'lucide-react'
 import './App.css'
 
-const API_URL = 'http://localhost:5000'
+const API_URL = '/api'
+
+async function readApiResponse(response) {
+  const text = await response.text()
+
+  if (!text) {
+    throw new Error('Sunucu cevap vermedi. Backend çalışıyor mı kontrol et.')
+  }
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error('Sunucudan geçersiz cevap geldi.')
+  }
+}
+
+const AuthContext = createContext(null)
+
+function AuthProvider({ children }) {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`${API_URL}/auth/me`, { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) return null
+        const data = await readApiResponse(response)
+        return data.user
+      })
+      .catch(() => null)
+      .then((activeUser) => setUser(activeUser))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <AuthContext.Provider value={{ user, setUser, loading }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+function useAuth() {
+  return useContext(AuthContext)
+}
 
 const listings = [
   {
@@ -66,15 +109,15 @@ function Logo() {
 
 function Header() {
   const [open, setOpen] = useState(false)
-  const user = JSON.parse(localStorage.getItem('emlak360_user') || 'null')
+  const { user, setUser } = useAuth()
 
   const logout = async () => {
     try {
-      await fetch(`${API_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' })
+      await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
     } catch {
       // Tarayıcı sunucuyla görüşemese bile oturumu yerel arayüzden kapatır.
     }
-    localStorage.removeItem('emlak360_user')
+    setUser(null)
     window.location.href = '/'
   }
 
@@ -255,12 +298,12 @@ function RegisterPage() {
     }
     setLoading(true)
     try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: form.get('name'), email: form.get('email'), password: form.get('password') }),
       })
-      const data = await response.json()
+      const data = await readApiResponse(response)
       if (!response.ok) throw new Error(data.message || 'Kayıt yapılamadı.')
       navigate('/giris')
     } catch (requestError) {
@@ -287,6 +330,7 @@ function RegisterPage() {
 
 function LoginPage() {
   const navigate = useNavigate()
+  const { setUser } = useAuth()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -296,15 +340,15 @@ function LoginPage() {
     const form = new FormData(event.currentTarget)
     setLoading(true)
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
       })
-      const data = await response.json()
+      const data = await readApiResponse(response)
       if (!response.ok) throw new Error(data.message || 'Giriş yapılamadı.')
-      localStorage.setItem('emlak360_user', JSON.stringify(data.user))
+      setUser(data.user)
       navigate('/profil')
     } catch (requestError) {
       setError(requestError.message)
@@ -328,10 +372,34 @@ function LoginPage() {
 
 function ProfilePage() {
   const navigate = useNavigate()
-  const user = JSON.parse(localStorage.getItem('emlak360_user') || 'null')
+  const { user, setUser, loading } = useAuth()
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  if (!user) return <Navigate to="/giris" replace />
+  const [profileLoading, setProfileLoading] = useState(true)
+  const profileRequestStarted = useRef(false)
+
+  useEffect(() => {
+    if (loading) return
+    if (!user) {
+      navigate('/giris', { replace: true })
+      return
+    }
+    if (profileRequestStarted.current) return
+
+    profileRequestStarted.current = true
+    fetch(`${API_URL}/users/profile`, { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Profil bilgileri alınamadı.')
+        const data = await readApiResponse(response)
+        setUser(data.user)
+      })
+      .catch((requestError) => setError(requestError.message))
+      .finally(() => setProfileLoading(false))
+  }, [loading, navigate, setUser, user])
+
+  if (loading) return <main className="loading-page"><div className="loading-spinner" /> Oturum kontrol ediliyor...</main>
+  if (profileLoading) return <main className="loading-page"><div className="loading-spinner" /> Profil yükleniyor...</main>
+  if (!user) return null
 
   const updateProfile = async (event) => {
     event.preventDefault()
@@ -339,15 +407,15 @@ function ProfilePage() {
     setError('')
     const name = new FormData(event.currentTarget).get('name')
     try {
-      const response = await fetch(`${API_URL}/api/users/profile`, {
+      const response = await fetch(`${API_URL}/users/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ name }),
       })
-      const data = await response.json()
+      const data = await readApiResponse(response)
       if (!response.ok) throw new Error(data.message || 'Profil güncellenemedi.')
-      localStorage.setItem('emlak360_user', JSON.stringify(data.user))
+      setUser(data.user)
       setMessage(data.message)
     } catch (requestError) {
       setError(requestError.message)
@@ -360,7 +428,7 @@ function ProfilePage() {
     setError('')
     const form = new FormData(event.currentTarget)
     try {
-      const response = await fetch(`${API_URL}/api/users/password`, {
+      const response = await fetch(`${API_URL}/users/password`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -369,9 +437,9 @@ function ProfilePage() {
           newPassword: form.get('newPassword'),
         }),
       })
-      const data = await response.json()
+      const data = await readApiResponse(response)
       if (!response.ok) throw new Error(data.message || 'Şifre değiştirilemedi.')
-      localStorage.removeItem('emlak360_user')
+      setUser(null)
       setMessage(data.message)
       navigate('/giris')
     } catch (requestError) {
@@ -441,20 +509,22 @@ function PlaceholderPage({ title }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Header />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/kayit" element={<RegisterPage />} />
-        <Route path="/giris" element={<LoginPage />} />
-        <Route path="/profil" element={<ProfilePage />} />
-        <Route path="/ilanlar" element={<PlaceholderPage title="İlanlar" />} />
-        <Route path="/ilan-ver" element={<PlaceholderPage title="İlan Ver" />} />
-        <Route path="/favoriler" element={<PlaceholderPage title="Favoriler" />} />
-        <Route path="/admin" element={<PlaceholderPage title="Yönetici Paneli" />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-      <Footer />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Header />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/kayit" element={<RegisterPage />} />
+          <Route path="/giris" element={<LoginPage />} />
+          <Route path="/profil" element={<ProfilePage />} />
+          <Route path="/ilanlar" element={<PlaceholderPage title="İlanlar" />} />
+          <Route path="/ilan-ver" element={<PlaceholderPage title="İlan Ver" />} />
+          <Route path="/favoriler" element={<PlaceholderPage title="Favoriler" />} />
+          <Route path="/admin" element={<PlaceholderPage title="Yönetici Paneli" />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+        <Footer />
+      </BrowserRouter>
+    </AuthProvider>
   )
 }

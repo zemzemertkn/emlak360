@@ -727,6 +727,50 @@ Bu bölüm Emlak360 projesinin gelişim geçmişini gösterir.
 
 ### 11.2. Diğer Ekip Üyelerinin Geliştirme Kayıtları
 
+#### Nurşen — Kullanıcı Arayüzü ve Temel Sayfalar
+
+**Tarih:** 21 Kasım 2026  
+**Durum:** Temel frontend uygulaması, oturum kontrolleri ve API bağlantıları hazırlandı.  
+**İlgili Issue:** UI-01  
+**İlgili Pull Request:** https://github.com/zemzemertkn/emlak360/pull/7
+
+**Yapılan çalışmalar:**
+
+- React + Vite frontend uygulaması oluşturuldu.
+- Figma tasarımına uygun ana sayfa, header, footer ve liste kartları hazırlandı.
+- Kayıt, giriş, profil ve şifre değiştirme ekranları oluşturuldu.
+- `/api/auth/me` oturum kontrolü AuthProvider içinde bağlandı.
+- Kayıt, giriş, çıkış, profil ve şifre API çağrıları eklendi.
+- Giriş yapmamış kullanıcıların profil sayfasına giriş ekranına yönlendirilmesi sağlandı.
+- Mobil, tablet ve masaüstü CSS duyarlı düzenleri hazırlandı.
+- 404 ve ekip modülleri için placeholder yönlendirmeler eklendi.
+- Vite proxy üzerinden geliştirme ortamı API yönlendirmesi eklendi.
+
+**Eklenen veya değiştirilen dosyalar:**
+
+- `frontend/src/App.jsx`
+- `frontend/src/App.css`
+- `frontend/src/index.css`
+- `frontend/vite.config.js`
+- `frontend/src/App.test.jsx`
+- `docs/dir/nursen.md`
+- `docs/tasks/nursen.md`
+
+**Yapılan testler ve sonuçları:**
+
+- Üretim derleme kontrolü.
+- Oxlint kaynak kontrolü.
+- Ana sayfa, oturum yönlendirme ve eşleşmeyen şifre senaryoları için Vitest testleri.
+
+**DİR risk değerlendirmeleri:**
+
+- `docs/dir/nursen.md` dosyasında form doğrulama, oturum, mobil uyum ve API hata riskleri değerlendirildi.
+
+**Bilinen eksikler:**
+
+- Yerel backend ve PostgreSQL ortamı kurularak uçtan uca API testleri yapılmalıdır.
+- Ekip modülleri (ilan, favori, iletişim ve yönetici) henüz ayrı görev sahipleri tarafından entegre edilmelidir.
+
 Nurşen, Yağız, Kübra, Asmin ve Leyla geliştirmelerini tamamladıkça bu başlık altında kendi adlarıyla yeni kayıt oluşturacaktır.
 
 Yeni kayıt formatı:
