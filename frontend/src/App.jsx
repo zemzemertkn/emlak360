@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react'
-import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import AdminPanel from './pages/AdminPanel'
+import { AuthProvider } from './auth'
+import { useAuth } from './useAuth'
+import { requestApi } from './api'
 import {
   Bath,
   BedDouble,
@@ -20,8 +23,6 @@ import {
   X,
 } from 'lucide-react'
 import './App.css'
-
-const API_URL = 'http://localhost:5000'
 
 const listings = [
   {
@@ -67,32 +68,23 @@ function Logo() {
 
 function Header() {
   const [open, setOpen] = useState(false)
-
-  const [user, setUser] = useState(() => {
-    return JSON.parse(localStorage.getItem('emlak360_user') || 'null')
-  })
-
-  useEffect(() => {
-    const updateUser = () => {
-      setUser(JSON.parse(localStorage.getItem('emlak360_user') || 'null'))
-    }
-
-    window.addEventListener('emlak360-auth-changed', updateUser)
-
-    return () => {
-      window.removeEventListener('emlak360-auth-changed', updateUser)
-    }
-  }, [])
+  const { user, request, setUser } = useAuth()
+  const navigate = useNavigate()
+  const [logoutError, setLogoutError] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const logout = async () => {
+    setLogoutError('')
+    setLoggingOut(true)
     try {
-      await fetch(`${API_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' })
-    } catch {
-      // Tarayıcı sunucuyla görüşemese bile oturumu yerel arayüzden kapatır.
+      await request('/auth/logout', { method: 'POST' })
+      setUser(null)
+      navigate('/')
+    } catch (error) {
+      setLogoutError(error.message)
+    } finally {
+      setLoggingOut(false)
     }
-    localStorage.removeItem('emlak360_user')
-    window.dispatchEvent(new Event('emlak360-auth-changed'))
-    window.location.href = '/'
   }
 
   return (
@@ -110,7 +102,7 @@ function Header() {
           {user ? (
             <div className="nav-user">
               <Link className="profile-link" to="/profil"><UserRound size={17} /> {user.name}</Link>
-              <button className="logout-button" type="button" onClick={logout} title="Çıkış yap">
+              <button className="logout-button" type="button" onClick={logout} disabled={loggingOut} title="Çıkış yap">
                 <LogOut size={17} />
               </button>
             </div>
@@ -121,6 +113,7 @@ function Header() {
             </>
           )}
         </nav>
+        {logoutError && <p role="alert" className="alert error">{logoutError}</p>}
       </div>
     </header>
   )
@@ -272,13 +265,11 @@ function RegisterPage() {
     }
     setLoading(true)
     try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
+      await requestApi('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: form.get('name'), email: form.get('email'), password: form.get('password') }),
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message || 'Kayıt yapılamadı.')
       navigate('/giris')
     } catch (requestError) {
       setError(requestError.message)
@@ -304,6 +295,8 @@ function RegisterPage() {
 
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { setUser } = useAuth()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -313,16 +306,12 @@ function LoginPage() {
     const form = new FormData(event.currentTarget)
     setLoading(true)
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const data = await requestApi('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message || 'Giriş yapılamadı.')
-      localStorage.setItem('emlak360_user', JSON.stringify(data.user))
-      window.dispatchEvent(new Event('emlak360-auth-changed'))
+      setUser(data.user)
       navigate('/profil')
     } catch (requestError) {
       setError(requestError.message)
@@ -334,6 +323,7 @@ function LoginPage() {
   return (
     <AuthLayout title="Tekrar hoş geldin" subtitle="Emlak360 hesabına giriş yap." >
       <form className="auth-form" onSubmit={submit}>
+        {location.state?.message && <div className="alert success" role="status">{location.state.message}</div>}
         {error && <div className="alert error">{error}</div>}
         <label>E-posta<input name="email" type="email" placeholder="ornek@mail.com" required /></label>
         <label>Şifre<div className="password-input"><LockKeyhole size={16} /><input name="password" type="password" placeholder="Şifreni gir" required /></div></label>
@@ -345,11 +335,33 @@ function LoginPage() {
 }
 
 function ProfilePage() {
-  const navigate = useNavigate()
-  const user = JSON.parse(localStorage.getItem('emlak360_user') || 'null')
+  const { user, setUser, loading, sessionError, request, refreshSession } = useAuth()
   const [message, setMessage] = useState('')
+  const [passwordMessage, setPasswordMessage] = useState('')
   const [error, setError] = useState('')
-  if (!user) return <Navigate to="/giris" replace />
+  const [profileLoading, setProfileLoading] = useState(true)
+  const userId = user?.id
+
+  useEffect(() => {
+    if (!userId) return
+    const controller = new AbortController()
+    request('/users/profile', { signal: controller.signal })
+      .then((data) => {
+        if (!controller.signal.aborted) setUser(data.user)
+      })
+      .catch((requestError) => {
+        if (!controller.signal.aborted) setError(requestError.message)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setProfileLoading(false)
+      })
+    return () => controller.abort()
+  }, [request, setUser, userId])
+
+  if (loading) return <main className="loading-page"><div className="loading-spinner" /> Oturum kontrol ediliyor...</main>
+  if (sessionError) return <main className="container"><p role="alert">{sessionError}</p><button onClick={() => refreshSession()}>Tekrar dene</button></main>
+  if (!user) return <Navigate to="/giris" replace state={passwordMessage ? { message: passwordMessage } : null} />
+  if (profileLoading) return <main className="loading-page"><div className="loading-spinner" /> Profil yükleniyor...</main>
 
   const updateProfile = async (event) => {
     event.preventDefault()
@@ -357,16 +369,12 @@ function ProfilePage() {
     setError('')
     const name = new FormData(event.currentTarget).get('name')
     try {
-      const response = await fetch(`${API_URL}/api/users/profile`, {
+      const data = await request('/users/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ name }),
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message || 'Profil güncellenemedi.')
-      localStorage.setItem('emlak360_user', JSON.stringify(data.user))
-      window.dispatchEvent(new Event('emlak360-auth-changed'))
+      setUser(data.user)
       setMessage(data.message)
     } catch (requestError) {
       setError(requestError.message)
@@ -379,20 +387,16 @@ function ProfilePage() {
     setError('')
     const form = new FormData(event.currentTarget)
     try {
-      const response = await fetch(`${API_URL}/api/users/password`, {
+      const data = await request('/users/password', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           currentPassword: form.get('currentPassword'),
           newPassword: form.get('newPassword'),
         }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message || 'Şifre değiştirilemedi.')
-      localStorage.removeItem('emlak360_user')
-      setMessage(data.message)
-      navigate('/giris')
+      }, { verifyUnauthorized: true })
+      setPasswordMessage(data.message)
+      setUser(null)
     } catch (requestError) {
       setError(requestError.message)
     }
@@ -415,7 +419,7 @@ function ProfilePage() {
         <section id="profile" className="profile-card">
           <h2>Profil bilgileri</h2>
           <form onSubmit={updateProfile}>
-            <label>Ad soyad<input name="name" defaultValue={user.name} required /></label>
+            <label>Ad soyad<input name="name" key={user.name} defaultValue={user.name} required /></label>
             <label>E-posta<input value={user.email} readOnly /></label>
             <button className="small-primary" type="submit">Profili kaydet</button>
           </form>
@@ -460,20 +464,22 @@ function PlaceholderPage({ title }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Header />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/kayit" element={<RegisterPage />} />
-        <Route path="/giris" element={<LoginPage />} />
-        <Route path="/profil" element={<ProfilePage />} />
-        <Route path="/ilanlar" element={<PlaceholderPage title="İlanlar" />} />
-        <Route path="/ilan-ver" element={<PlaceholderPage title="İlan Ver" />} />
-        <Route path="/favoriler" element={<PlaceholderPage title="Favoriler" />} />
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-      <Footer />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Header />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/kayit" element={<RegisterPage />} />
+          <Route path="/giris" element={<LoginPage />} />
+          <Route path="/profil" element={<ProfilePage />} />
+          <Route path="/ilanlar" element={<PlaceholderPage title="İlanlar" />} />
+          <Route path="/ilan-ver" element={<PlaceholderPage title="İlan Ver" />} />
+          <Route path="/favoriler" element={<PlaceholderPage title="Favoriler" />} />
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+        <Footer />
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
