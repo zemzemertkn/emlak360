@@ -4,8 +4,20 @@ const argon2 = require("argon2");
 const { z } = require("zod");
 const crypto = require("node:crypto");
 const cookieParser = require("cookie-parser");
+const cors = require("cors");
 const app = express();
 const prisma = new PrismaClient();
+const allowedOrigin =
+  process.env.FRONTEND_URL || "http://localhost:5173";
+
+app.use(
+  cors({
+    origin: allowedOrigin,
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 
 // JSON verilerini okuyabilmek için
 app.use(express.json());
