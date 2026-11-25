@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import {
   Bath,
@@ -66,7 +66,22 @@ function Logo() {
 
 function Header() {
   const [open, setOpen] = useState(false)
-  const user = JSON.parse(localStorage.getItem('emlak360_user') || 'null')
+
+  const [user, setUser] = useState(() => {
+    return JSON.parse(localStorage.getItem('emlak360_user') || 'null')
+  })
+
+  useEffect(() => {
+    const updateUser = () => {
+      setUser(JSON.parse(localStorage.getItem('emlak360_user') || 'null'))
+    }
+
+    window.addEventListener('emlak360-auth-changed', updateUser)
+
+    return () => {
+      window.removeEventListener('emlak360-auth-changed', updateUser)
+    }
+  }, [])
 
   const logout = async () => {
     try {
@@ -75,6 +90,7 @@ function Header() {
       // Tarayıcı sunucuyla görüşemese bile oturumu yerel arayüzden kapatır.
     }
     localStorage.removeItem('emlak360_user')
+    window.dispatchEvent(new Event('emlak360-auth-changed'))
     window.location.href = '/'
   }
 
@@ -305,6 +321,7 @@ function LoginPage() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.message || 'Giriş yapılamadı.')
       localStorage.setItem('emlak360_user', JSON.stringify(data.user))
+      window.dispatchEvent(new Event('emlak360-auth-changed'))
       navigate('/profil')
     } catch (requestError) {
       setError(requestError.message)
@@ -348,6 +365,7 @@ function ProfilePage() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.message || 'Profil güncellenemedi.')
       localStorage.setItem('emlak360_user', JSON.stringify(data.user))
+      window.dispatchEvent(new Event('emlak360-auth-changed'))
       setMessage(data.message)
     } catch (requestError) {
       setError(requestError.message)
