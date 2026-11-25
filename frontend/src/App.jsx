@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import AdminPanel from './pages/AdminPanel'
+import { AuthProvider } from './auth'
+import { useAuth } from './useAuth'
+import { requestApi } from './api'
 import {
   Bath,
   BedDouble,
@@ -20,51 +23,6 @@ import {
   X,
 } from 'lucide-react'
 import './App.css'
-
-const API_URL = '/api'
-
-async function readApiResponse(response) {
-  const text = await response.text()
-
-  if (!text) {
-    throw new Error('Sunucu cevap vermedi. Backend çalışıyor mı kontrol et.')
-  }
-
-  try {
-    return JSON.parse(text)
-  } catch {
-    throw new Error('Sunucudan geçersiz cevap geldi.')
-  }
-}
-
-const AuthContext = createContext(null)
-
-function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch(`${API_URL}/auth/me`, { credentials: 'include' })
-      .then(async (response) => {
-        if (!response.ok) return null
-        const data = await readApiResponse(response)
-        return data.user
-      })
-      .catch(() => null)
-      .then((activeUser) => setUser(activeUser))
-      .finally(() => setLoading(false))
-  }, [])
-
-  return (
-    <AuthContext.Provider value={{ user, setUser, loading }}>
-      {children}
-    </AuthContext.Provider>
-  )
-}
-
-function useAuth() {
-  return useContext(AuthContext)
-}
 
 const listings = [
   {
@@ -110,16 +68,23 @@ function Logo() {
 
 function Header() {
   const [open, setOpen] = useState(false)
-  const { user, setUser } = useAuth()
+  const { user, request, setUser } = useAuth()
+  const navigate = useNavigate()
+  const [logoutError, setLogoutError] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const logout = async () => {
+    setLogoutError('')
+    setLoggingOut(true)
     try {
-      await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
-    } catch {
-      // Tarayıcı sunucuyla görüşemese bile oturumu yerel arayüzden kapatır.
+      await request('/auth/logout', { method: 'POST' })
+      setUser(null)
+      navigate('/')
+    } catch (error) {
+      setLogoutError(error.message)
+    } finally {
+      setLoggingOut(false)
     }
-    setUser(null)
-    window.location.href = '/'
   }
 
   return (
@@ -134,11 +99,10 @@ function Header() {
           <Link to="/ilan-ver">İlan Ver</Link>
           {user && <Link to="/favoriler">Favoriler</Link>}
           {user?.role === 'ADMIN' && <Link to="/admin">Yönetici Paneli</Link>}
-          {user?.role === 'ADMIN' && <Link to="/admin">Yönetici Paneli</Link>}
           {user ? (
             <div className="nav-user">
               <Link className="profile-link" to="/profil"><UserRound size={17} /> {user.name}</Link>
-              <button className="logout-button" type="button" onClick={logout} title="Çıkış yap">
+              <button className="logout-button" type="button" onClick={logout} disabled={loggingOut} title="Çıkış yap">
                 <LogOut size={17} />
               </button>
             </div>
@@ -149,6 +113,7 @@ function Header() {
             </>
           )}
         </nav>
+        {logoutError && <p role="alert" className="alert error">{logoutError}</p>}
       </div>
     </header>
   )
@@ -300,13 +265,11 @@ function RegisterPage() {
     }
     setLoading(true)
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
+      await requestApi('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: form.get('name'), email: form.get('email'), password: form.get('password') }),
       })
-      const data = await readApiResponse(response)
-      if (!response.ok) throw new Error(data.message || 'Kayıt yapılamadı.')
       navigate('/giris')
     } catch (requestError) {
       setError(requestError.message)
@@ -332,6 +295,7 @@ function RegisterPage() {
 
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { setUser } = useAuth()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -342,14 +306,11 @@ function LoginPage() {
     const form = new FormData(event.currentTarget)
     setLoading(true)
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const data = await requestApi('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
       })
-      const data = await readApiResponse(response)
-      if (!response.ok) throw new Error(data.message || 'Giriş yapılamadı.')
       setUser(data.user)
       navigate('/profil')
     } catch (requestError) {
@@ -362,6 +323,7 @@ function LoginPage() {
   return (
     <AuthLayout title="Tekrar hoş geldin" subtitle="Emlak360 hesabına giriş yap." >
       <form className="auth-form" onSubmit={submit}>
+        {location.state?.message && <div className="alert success" role="status">{location.state.message}</div>}
         {error && <div className="alert error">{error}</div>}
         <label>E-posta<input name="email" type="email" placeholder="ornek@mail.com" required /></label>
         <label>Şifre<div className="password-input"><LockKeyhole size={16} /><input name="password" type="password" placeholder="Şifreni gir" required /></div></label>
@@ -373,35 +335,33 @@ function LoginPage() {
 }
 
 function ProfilePage() {
-  const navigate = useNavigate()
-  const { user, setUser, loading } = useAuth()
+  const { user, setUser, loading, sessionError, request, refreshSession } = useAuth()
   const [message, setMessage] = useState('')
+  const [passwordMessage, setPasswordMessage] = useState('')
   const [error, setError] = useState('')
   const [profileLoading, setProfileLoading] = useState(true)
-  const profileRequestStarted = useRef(false)
+  const userId = user?.id
 
   useEffect(() => {
-    if (loading) return
-    if (!user) {
-      navigate('/giris', { replace: true })
-      return
-    }
-    if (profileRequestStarted.current) return
-
-    profileRequestStarted.current = true
-    fetch(`${API_URL}/users/profile`, { credentials: 'include' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Profil bilgileri alınamadı.')
-        const data = await readApiResponse(response)
-        setUser(data.user)
+    if (!userId) return
+    const controller = new AbortController()
+    request('/users/profile', { signal: controller.signal })
+      .then((data) => {
+        if (!controller.signal.aborted) setUser(data.user)
       })
-      .catch((requestError) => setError(requestError.message))
-      .finally(() => setProfileLoading(false))
-  }, [loading, navigate, setUser, user])
+      .catch((requestError) => {
+        if (!controller.signal.aborted) setError(requestError.message)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setProfileLoading(false)
+      })
+    return () => controller.abort()
+  }, [request, setUser, userId])
 
   if (loading) return <main className="loading-page"><div className="loading-spinner" /> Oturum kontrol ediliyor...</main>
+  if (sessionError) return <main className="container"><p role="alert">{sessionError}</p><button onClick={() => refreshSession()}>Tekrar dene</button></main>
+  if (!user) return <Navigate to="/giris" replace state={passwordMessage ? { message: passwordMessage } : null} />
   if (profileLoading) return <main className="loading-page"><div className="loading-spinner" /> Profil yükleniyor...</main>
-  if (!user) return null
 
   const updateProfile = async (event) => {
     event.preventDefault()
@@ -409,14 +369,11 @@ function ProfilePage() {
     setError('')
     const name = new FormData(event.currentTarget).get('name')
     try {
-      const response = await fetch(`${API_URL}/users/profile`, {
+      const data = await request('/users/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ name }),
       })
-      const data = await readApiResponse(response)
-      if (!response.ok) throw new Error(data.message || 'Profil güncellenemedi.')
       setUser(data.user)
       setMessage(data.message)
     } catch (requestError) {
@@ -430,20 +387,16 @@ function ProfilePage() {
     setError('')
     const form = new FormData(event.currentTarget)
     try {
-      const response = await fetch(`${API_URL}/users/password`, {
+      const data = await request('/users/password', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           currentPassword: form.get('currentPassword'),
           newPassword: form.get('newPassword'),
         }),
-      })
-      const data = await readApiResponse(response)
-      if (!response.ok) throw new Error(data.message || 'Şifre değiştirilemedi.')
+      }, { verifyUnauthorized: true })
+      setPasswordMessage(data.message)
       setUser(null)
-      setMessage(data.message)
-      navigate('/giris')
     } catch (requestError) {
       setError(requestError.message)
     }
@@ -466,7 +419,7 @@ function ProfilePage() {
         <section id="profile" className="profile-card">
           <h2>Profil bilgileri</h2>
           <form onSubmit={updateProfile}>
-            <label>Ad soyad<input name="name" defaultValue={user.name} required /></label>
+            <label>Ad soyad<input name="name" key={user.name} defaultValue={user.name} required /></label>
             <label>E-posta<input value={user.email} readOnly /></label>
             <button className="small-primary" type="submit">Profili kaydet</button>
           </form>

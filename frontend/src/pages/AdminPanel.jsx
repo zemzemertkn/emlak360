@@ -4,14 +4,16 @@ import { Navigate } from 'react-router-dom'
 import './AdminPanel.css'
 import { ShieldCheck, Users, Building2 } from 'lucide-react'
 
-const API_URL = 'http://localhost:5000'
+import { useAuth } from '../useAuth'
 
 export default function AdminPanel() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [users, setUsers] = useState([])
-const [usersLoading, setUsersLoading] = useState(false)
-const [usersError, setUsersError] = useState('')
+  const { user, loading, sessionError, refreshSession, request } = useAuth()
+  const [userList, setUserList] = useState(null)
+  const adminId = user?.role === 'ADMIN' ? user.id : null
+  const currentList = userList?.adminId === adminId ? userList : null
+  const users = currentList?.users ?? []
+  const usersError = currentList?.error
+  const usersLoading = !currentList
 const [search, setSearch] = useState('')
 const [roleFilter, setRoleFilter] = useState('ALL')
 
@@ -29,57 +31,24 @@ const filteredUsers = users.filter((item) => {
 })
 
   useEffect(() => {
-    async function checkAdmin() {
-      try {
-        const response = await fetch(`${API_URL}/api/auth/me`, {
-          credentials: 'include',
-        })
-
-        if (!response.ok) throw new Error('Oturum geçersiz')
-
-        const data = await response.json()
-        setUser(data.user)
-      } catch {
-        setUser(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    checkAdmin()
-  }, [])
-   
-  useEffect(() => {
-  if (user?.role !== 'ADMIN') return
-
-  async function fetchUsers() {
-    setUsersLoading(true)
-    setUsersError('')
-
-    try {
-      const response = await fetch(`${API_URL}/api/admin/users`, {
-        credentials: 'include',
+    if (!adminId) return
+    const controller = new AbortController()
+    request('/admin/users', { signal: controller.signal })
+      .then((data) => {
+        if (!controller.signal.aborted) setUserList({ adminId, users: data.users })
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setUserList({ adminId, error: error.message })
       })
 
-      if (!response.ok) {
-        throw new Error('Kullanıcılar getirilemedi.')
-      }
-
-      const data = await response.json()
-      setUsers(data.users)
-    } catch (error) {
-      setUsersError(error.message)
-    } finally {
-      setUsersLoading(false)
-    }
-  }
-
-  fetchUsers()
-}, [user])
+    return () => controller.abort()
+  }, [adminId, request])
 
   if (loading) {
     return <main className="container"><p>Yetki kontrol ediliyor...</p></main>
   }
+
+  if (sessionError) return <main className="container"><p role="alert">{sessionError}</p><button onClick={() => refreshSession()}>Tekrar dene</button></main>
 
   if (!user) return <Navigate to="/giris" replace />
 
@@ -100,7 +69,7 @@ const filteredUsers = users.filter((item) => {
 <div className="admin-stats">
   <div className="admin-stat-card">
     <span>Toplam Kullanıcı</span>
-    <strong>{usersLoading ? '...' : users.length}</strong>
+    <strong>{usersLoading ? '...' : usersError ? '—' : users.length}</strong>
   </div>
   {usersError && (
   <p role="alert" className="admin-error">
@@ -122,7 +91,7 @@ const filteredUsers = users.filter((item) => {
     <strong>
       {usersLoading
         ? '...'
-        : users.filter((item) => item.role === 'USER').length}
+        : usersError ? '—' : users.filter((item) => item.role === 'USER').length}
     </strong>
   </div>
 </div>

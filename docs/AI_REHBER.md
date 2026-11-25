@@ -82,7 +82,7 @@ Frontend tarafında React 19 + Vite 8 tabanlı uygulama geliştirilmektedir. İs
 
 Frontend geliştirme sunucusu yerel olarak http://localhost:5173, backend API'si http://localhost:5000 adresindedir. Ayrı origin'ler nedeniyle CORS yapılandırması ve çerezli isteklerde credentials: 'include' gereklidir.
 
-Entegrasyon notu: CORS (#9), Header oturum senkronizasyonu (#10) ve Yönetici Paneli (#11) değişiklikleri 24 Kasım 2026 kontrolünde açık PR durumundadır; bunlar develop üzerinde birleştirilmiş kabul edilmez.
+Entegrasyon notu: CORS (#9), Header oturum senkronizasyonu (#10), Yönetici Paneli (#11) ve rehber güncellemesi (#13) 25 Kasım 2026 itibarıyla develop geçmişindedir.
 Proje yönetimi
 - Git
 - GitHub
@@ -289,7 +289,7 @@ Oturum gerektiren isteklerde tarayıcının çerez göndermesi gerekir.
 fetch("http://localhost:5000/api/auth/me", {
   credentials: "include",
 });
-Frontend ve backend ayrı origin'lerde çalıştığı için CORS ve çerez ayarları yapılandırılmalıdır. CORS düzeltmesi fix/backend-cors üzerinde hazırlanmış ve PR #9 ile develop için önerilmiştir. 24 Kasım 2026 kontrolünde PR açıktır. Çözümün ekip develop branch'ine geçmiş olduğu varsayılmamalıdır.
+CORS düzeltmesi PR #9 ile develop dalına birleştirildi. Yerel entegrasyon dalında frontend istekleri ortak /api adresini kullanır. Vite geliştirme sunucusu bu istekleri localhost:5000 adresine iletir. Üretimde /api yönlendirmesi veya VITE_API_URL ve uyumlu CORS/çerez yapılandırması gerekir.
 
 Oturum açma, çıkış ve profil güncellemesi sonrasında Header'ın anlık yenilenmesi için fix/frontend-auth-state üzerinde ayrı bir değişiklik hazırlanmış ve PR #10 açılmıştır. Bu da develop üzerinde birleştirilmeden tamamlanmış entegrasyon olarak değerlendirilmemelidir.
 6.6. Yetkilendirme
@@ -303,7 +303,7 @@ Backend'de iki temel kontrol bulunmaktadır:
 Mevcut sistem temel işlev testlerinden geçmiştir ancak üretim ortamı için aşağıdaki çalışmalar gereklidir:
 - CSRF koruması
 - Giriş denemelerine hız sınırlaması
-- CORS PR #9'un incelenip birleştirilmesi; güvenli çerez yapılandırmasının ortam bazında doğrulanması
+- PR #9 ile birleşen CORS ve güvenli çerez yapılandırmasının ortam bazında doğrulanması
 - HTTPS
 - Süresi dolan oturumların temizlenmesi
 - Bağımlılık güvenlik uyarılarının incelenmesi
@@ -490,7 +490,7 @@ Test sonuçları gerektiğinde docs/quality/, modüle ait backend/tests/ veya or
 
 Yönetici API otomasyon örneği: backend/tests/admin.test.js dosyası test/admin-api branch'inde, Node.js yerleşik node:test ve fetch kullanılarak hazırlanmıştır. Dört senaryo yerel ortamda başarıyla çalıştırılmıştır: (1) oturumsuz istek 401, (2) USER rolü 403, (3) ADMIN rolü 200, (4) ADMIN kullanıcı listesi veri alanları/rolleri. Testler gerçek backend'in http://localhost:5000 üzerinde çalışmasını ve yerel test hesaplarının ortam değişkenleriyle verilmesini gerektirir. Backend kapalı olduğunda ECONNREFUSED hatası beklenir; bu, otomatik olarak iş mantığı hatası anlamına gelmez. Test şifreleri kodda veya Git'te tutulmaz.
 
-Testler Asmin'in fork'unda test/admin-api → feature/admin-panel hedefli PR #1 ile sunulmuştur. Bu henüz ortak develop içine entegre edilmiş bir test PR'ı değildir; Yönetici Paneli PR #11 birleştirildikten sonra uygun hedef/aktarılma süreci tamamlanmalıdır.
+Testler Asmin'in fork'unda test/admin-api → feature/admin-panel hedefli PR #1 ile sunulmuştur. Yönetici Paneli PR #11 develop dalına birleştirildi. Fork'taki backend testleri ortak develop dalına henüz aktarılmadı.
 
 Test edilmemiş bir özellik, yalnızca kodu yazıldığı için tamamlanmış sayılmamalıdır. Yerel test başarıları da tek başına ortak branch'e entegrasyon veya CI başarısını kanıtlamaz.
 11. YAPILAN ÇALIŞMALAR — PROJE GELİŞTİRME KAYDI
@@ -553,7 +553,7 @@ Devam eden / kontrol edilmesi gereken işler:
 Not: Yerel ortamda başarılı olan testler, GitHub'a aktarım veya üretim ortamı hazırlığının tamamlandığı anlamına gelmez.
 11.2. Asmin — Yönetici Paneli ve Kalite Testleri (Yeni kayıt; önceki kayıtlar korunmuştur)
 Tarih: 22–24 Kasım 2026
-Durum: Yerel geliştirme ve ilgili manuel/otomatik testler tamamlandı; PR incelemesi ve ekip develop branch'ine entegrasyon bekleniyor. İlan Denetimi, ilan modülü henüz hazır olmadığından beklemede.
+Durum: Yerel geliştirme ve ilgili manuel/otomatik testler tamamlandı; PR #9, #10 ve #11 develop dalına birleştirildi. İlan Denetimi, ilan modülü henüz hazır olmadığından beklemede.
 İlgili Issue: QA-01 / emlak360 #5
 İlgili Pull Request'ler: CORS #9, Header #10, Yönetici Paneli #11, otomatik test — kişisel fork PR #1.
 
@@ -575,14 +575,14 @@ API / veritabanı değişiklikleri: Yönetici Paneli mevcut GET /api/auth/me ve 
 
 Yerel testler: ADMIN panelini görüntüleme; USER rolündeki Ali test hesabıyla /admin üzerinde 403; kullanıcı arama/rol filtreleme (üç senaryo); sayaçların veriye uygun gösterimi; backend erişilemezken oturum kontrolünün giriş sayfasına yönlendirmesi; API üzerinde 401, 403, 200 ve kullanıcı alan/rol doğrulaması — dört otomatik test başarılı. Frontend Header'da backend erişilemezken eski kullanıcı adının görünmesi ayrıca iyileştirme notudur; oturumun kesin sonlandığını kanıtlamaz.
 
-Bilinen eksikler / bağımlılıklar: İlan Denetimi henüz uygulanmadı (ilan modülünü bekliyor). PR #9, #10, #11'in birleştirilmesi ve birlikte regresyon testi gerekir. Otomatik test PR'ının ortak develop branch'ine taşınması ve CI entegrasyonu beklenir. CORS ve Header değişiklikleri farklı branch'lerde olduğundan aynı App.jsx dosyasındaki entegrasyon ayrıca kontrol edilmelidir.
+Bilinen eksikler / bağımlılıklar: İlan Denetimi henüz uygulanmadı (ilan modülünü bekliyor). PR #9, #10 ve #11 develop dalına birleştirildi. Birlikte regresyon testi gerekir. Otomatik test PR'ının ortak develop branch'ine taşınması ve CI entegrasyonu beklenir. CORS ve Header değişiklikleri farklı branch'lerde olduğundan aynı App.jsx dosyasındaki entegrasyon ayrıca kontrol edilmelidir.
 
 DİR / DREAD: Yönetici paneline yetkisiz erişim riski için test kanıtı oluştu; beş kriterin sayısal puanları henüz belgelenmediği için skor belirtilmez.
 #### Nurşen — Kullanıcı Arayüzü ve Temel Sayfalar
 
-**Tarih:** 21 Kasım 2026  
-**Durum:** Temel frontend uygulaması, oturum kontrolleri ve API bağlantıları hazırlandı.  
-**İlgili Issue:** UI-01  
+**Tarih:** 21 Kasım 2026
+**Durum:** Temel frontend uygulaması, oturum kontrolleri ve API bağlantıları hazırlandı.
+**İlgili Issue:** UI-01
 **İlgili Pull Request:** https://github.com/zemzemertkn/emlak360/pull/7
 
 **Yapılan çalışmalar:**
@@ -622,8 +622,21 @@ DİR / DREAD: Yönetici paneline yetkisiz erişim riski için test kanıtı olu�
 - Yerel backend ve PostgreSQL ortamı kurularak uçtan uca API testleri yapılmalıdır.
 - Ekip modülleri (ilan, favori, iletişim ve yönetici) henüz ayrı görev sahipleri tarafından entegre edilmelidir.
 
-11.3. Diğer Ekip Üyelerinin Geliştirme Kayıtları
-Nurşen, Yağız, Kübra ve Leyla geliştirmelerini tamamladıkça bu başlık altında kendi adlarıyla yeni kayıt oluşturacaktır. Asmin'in sonraki gelişmeleri de yeni tarihli kayıt olarak eklenir; mevcut kayıt değiştirilmez.
+11.3. Frontend oturum ve yönetici paneli entegrasyonu
+Tarih: 25 Kasım 2026
+Dal: integration/frontend-auth-admin (yerel)
+Kaynak: Nurşen'in 9af48c5 commit'i ve develop 6a091df.
+
+- Header, profil ve yönetici paneli sunucu oturumuna dayanan tek AuthProvider kullanır.
+- Ortak API istemcisi çerezli istekleri, ağ hatalarını ve HTTP durumlarını yönetir. Yetkisiz oturum temizlenir. Şifre değiştirme 401 yanıtında mevcut şifrenin yanlış olması ile oturumun sona ermesi oturum sorgusuyla ayrılır.
+- Başarısız çıkış isteğinde kullanıcı durumu korunur ve hata gösterilir. Başarılı şifre değişikliği ortak oturumu temizler.
+- Asmin'in yönetici rotası, tablo, arama ve rol filtresi korunur. Backend rol kontrolleri ve veritabanı değişmedi.
+- Nurşen'in frontend testleri ve ek regresyonlar entegrasyon dalındadır. Asmin'in fork'undaki backend otomasyon testi ayrı çalışmadır ve bu dalla aktarılmadı.
+- Doğrulama: npm ci, lint ve üretim derlemesi başarılı. Vitest 4.1.12 ve Vite 8.3.8 ile 13 frontend testi geçti. Oturumlu senaryolar sahte API yanıtlarıyla çalıştırıldı.
+- Vite geliştirme proxy'si üzerinden sağlık isteği 200, çerezsiz oturum ve admin istekleri 401 döndürdü. Canlı oturumlu USER ve ADMIN akışları çalıştırılmadı.
+
+11.4. Diğer Ekip Üyelerinin Geliştirme Kayıtları
+Yağız, Kübra ve Leyla geliştirmelerini tamamladıkça bu başlık altında kendi adlarıyla yeni kayıt oluşturacaktır. Asmin'in sonraki gelişmeleri de yeni tarihli kayıt olarak eklenir; mevcut kayıt değiştirilmez.
 
 Yeni kayıt formatı:
 [Ekip üyesi] — [Görev / Modül]
